@@ -7,7 +7,8 @@ class MainWindow:
 		# Window
 		win = self.win = gtk.Window()
 		win.set_title( "mIDE" )
-		win.set_size_request( 600,400 )
+		win.set_size_request( 200 , 400 )
+		win.connect( "delete-event" , self.on_win_delete )
 
 		# Main box
 		box = self.box = gtk.VBox( False )
@@ -17,28 +18,21 @@ class MainWindow:
 		menubar = self.menubar = gtk.MenuBar()
 		box.pack_start( menubar , False , True )
 
-		# Pane
-		pane = self.pane = gtk.HPaned()
-		box.pack_start( pane , True , True )
-
 		# Project Store
 		ps = self.ps = project.Store()
 
 		# Project View
 		pv = self.pv = project.View( ps )
-		pane.add( pv )
+		box.pack_start( pv , True , True )
 
 		# Project Menu
 		pm = self.pm = project.Menu( ps )
 		menubar.append( pm )
 
-
-		# Placeholder
-		ph = gtk.Label( "Placeholder for a Editor" )
-		pane.add2( ph )
-
 		win.show_all()
 
+	def on_win_delete( self , widget , *data ):
+		gtk.main_quit()
 
 mw = MainWindow()
 gtk.main()

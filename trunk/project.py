@@ -1,14 +1,25 @@
 import gtk
+import os
 
 class Store:
 	def __init__( self ):
 		self.view = None
 		self.menu = None
+		self.file = None
+		self.project_files = set()
 
-	def new_project( self , name ):
-		self.name = name
-		if self.view: self.view.new_project( name )
-		if self.menu: self.menu.new_project( )
+
+	def clear( self ):
+		pass
+
+	def save( self ):
+		pass
+
+	def add_file( self , fn ):
+		self.project_files.add( fn )
+		if self.view: self.view.file_added( fn )
+
+
 
 class View( gtk.ScrolledWindow ):
 	def __init__( self , store ):
@@ -45,20 +56,21 @@ class View( gtk.ScrolledWindow ):
 		item = gtk.MenuItem( "Add Folder" )
 		popup.append( item )
 		item = gtk.MenuItem( "Add File" )
+		item.connect( "activate" , self.on_add_file )
 		popup.append( item )
 		popup.show_all()
 
 		# Disable us
-		self.set_sensitive( False )
+		#self.set_sensitive( False )
 
-	def new_project( self , name ):
+	def project_created( self ):
 		self.set_sensitive( True )
 		self.tv.set_sensitive( True )
 		model = self.model
 		model.clear()
-		i = model.append( None )
-		model.set( i , 0 , self.tv.render_icon( gtk.STOCK_DIRECTORY , gtk.ICON_SIZE_MENU ) , 1 , name )
-		self.tv.expand_all()
+		#i = model.append( None )
+		#model.set( i , 0 , self.tv.render_icon( gtk.STOCK_DIRECTORY , gtk.ICON_SIZE_MENU ) , 1 , name )
+		#self.tv.expand_all()
 
 	def on_button_press( self , treeview , event ):
 		# Show Right-click menu: self.popup
@@ -72,6 +84,28 @@ class View( gtk.ScrolledWindow ):
 				treeview.grab_focus()
 				treeview.set_cursor( path, col, 0)
 				self.popup.popup( None, None, None, event.button, time)
+			else:
+				self.popup.popup( None, None, None, event.button, time)
+
+	def on_add_file( self , widget , *data ):
+		fc = self.fc = gtk.FileChooserDialog( "Add File" , None , gtk.FILE_CHOOSER_ACTION_SAVE , ( gtk.STOCK_CANCEL , gtk.RESPONSE_CANCEL , gtk.STOCK_OK , gtk.RESPONSE_OK ) )
+		fc.connect( "response" , self.on_add_file_response )
+		fc.show()
+
+
+	def on_add_file_response( self , widget , response ):
+		fn = self.fc.get_filename()
+		self.fc.hide()
+		if response == gtk.RESPONSE_OK:
+			self.store.add_file( fn )
+		del self.fc
+
+	def file_added( self , fn ):
+		#print "File Added " + os.path.basename( fn )
+		m = self.model
+		i = m.append( None )
+		m.set( i , 1 , os.path.basename( fn ) )
+		
 
 class Menu( gtk.MenuItem ):
 	def __init__( self , store ):
@@ -94,66 +128,33 @@ class Menu( gtk.MenuItem ):
 		menu.append( item )
 		# Save
 		save = self.save = gtk.ImageMenuItem( gtk.STOCK_SAVE )
-		save.set_sensitive( False )
+		save.connect( "activate" , self.on_save_activated )
+		#save.set_sensitive( False )
 		menu.append( save )
 		# Save As
 		saveas = self.saveas = gtk.ImageMenuItem( gtk.STOCK_SAVE_AS )
-		saveas.set_sensitive( False )
+		saveas.connect( "activate" , self.on_save_as_activated )
+		#saveas.set_sensitive( False )
 		menu.append( saveas )
 
 	def on_new_activated( self , widget , **data ):
-		npw = self.npw = NewProjectWindow( None )
-		npw.show()
-		npw.connect( "response" , self.on_npw_response )
+		self.store.clear()
 
-	def on_npw_response( self , widget , response ):
-		name = self.npw.ne.get_text()
-		location = self.npw.lf.get_filename()
-		self.npw.hide()
+	def on_save_activated( self , widget , **data ):
+		if self.store.file: self.store.save()
+		else: self.on_save_as_activated( widget )
 
+	def on_save_as_activated( self , widget , **data ):
+		sfc = self.sfc = gtk.FileChooserDialog( "Save Project As" , None , gtk.FILE_CHOOSER_ACTION_SAVE , ( gtk.STOCK_CANCEL , gtk.RESPONSE_CANCEL , gtk.STOCK_OK , gtk.RESPONSE_OK ) )
+		sfc.connect( "response" , self.on_sfc_response )
+		sfc.show()
+
+
+	def on_sfc_response( self , widget , response ):
+		pf = self.sfc.get_filename()
+		self.sfc.hide()
 		if response == gtk.RESPONSE_OK:
-			self.store.new_project( name )
-
-	def new_project( self ):
-		self.save.set_sensitive( True )
-		self.saveas.set_sensitive( True )
-
-
-
-class NewProjectWindow( gtk.Dialog ):
-	def __init__( self , parent ):
-		gtk.Dialog.__init__( self , "New Project" , parent , gtk.DIALOG_MODAL|gtk.DIALOG_DESTROY_WITH_PARENT , ( gtk.STOCK_CANCEL , gtk.RESPONSE_CANCEL , gtk.STOCK_OK , gtk.RESPONSE_OK ) )
-
-
-		# Table
-		table = gtk.Table( 2 , 2 )
-		table.set_row_spacings( 5 )
-		table.set_col_spacings( 5 )
-		table.set_border_width( 8 )
-		self.vbox.pack_start( table )
-		table.show()
-
-		# Name Label
-		l = gtk.Label( "Name:" )
-		l.set_markup( "<b>Name:</b>" )
-		l.set_alignment( 0 , 0.5 )
-		table.attach( l , 0,1,0,1 , gtk.FILL , gtk.FILL )
-
-		# Location Label
-		l = gtk.Label( "Location:" )
-		l.set_markup( "<b>Location:</b>" )
-		l.set_alignment( 0 , 0.5 )
-		table.attach( l , 0,1,1,2 , gtk.FILL , gtk.FILL )
-
-		# Name Entry
-		ne = self.ne = gtk.Entry()
-		table.attach( ne , 1,2,0,1 , gtk.EXPAND|gtk.FILL , gtk.FILL )
-		ne.show()
-
-		# Location FileChooserButton
-		lf = self.lf = gtk.FileChooserButton( "Project Location" )
-		lf.set_action( gtk.FILE_CHOOSER_ACTION_SELECT_FOLDER )
-		table.attach( lf , 1,2,1,2 , gtk.EXPAND|gtk.FILL , gtk.FILL )
-		lf.show()
-	
-		self.show_all()
+			if not pf.endswith( ".mide" ): pf += ".mide"
+			self.store.file = pf
+			self.store.save()
+		del self.sfc
