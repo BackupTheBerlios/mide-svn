@@ -8,12 +8,29 @@ class Store:
 		self.file = None
 		self.project_files = set()
 
-
 	def clear( self ):
 		pass
 
 	def save( self ):
-		pass
+		if not self.file: return
+
+		files = self.project_files.copy()
+		files.add( self.file )
+
+		nf = []
+		cp = os.path.commonprefix( files )
+		for f in self.project_files:
+			nf.append( f[len(cp) : ] )
+
+		fp = open( self.file , "w" )
+		fp.write( "<mide version=\"1.0\">\n" )
+		for file in nf:
+			fp.write( "<file>" + file + "</file>\n" )
+		fp.write( "</mide>" )
+		fp.close()
+
+
+
 
 	def add_file( self , fn ):
 		self.project_files.add( fn )
@@ -104,7 +121,7 @@ class View( gtk.ScrolledWindow ):
 		#print "File Added " + os.path.basename( fn )
 		m = self.model
 		i = m.append( None )
-		m.set( i , 1 , os.path.basename( fn ) )
+		m.set( i , 0 , self.tv.render_icon( gtk.STOCK_FILE , gtk.ICON_SIZE_MENU ) , 1 , os.path.basename( fn ) )
 		
 
 class Menu( gtk.MenuItem ):
