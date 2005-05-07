@@ -1,5 +1,6 @@
 import gtk
 import os
+import xml.parsers.expat
 
 import utils
 
@@ -30,6 +31,33 @@ class Store:
 			fp.write( "<file>" + file[len(cp):] + "</file>\n" )
 		fp.write( "</mide>\n" )
 		fp.close()
+	def open( self ):
+		x = xml.parsers.expat.ParserCreate()
+		class ParserCB:
+			inside_file = False
+			store = None
+			def start_element_handler( self , name , attrs ):
+				if name == "file": self.inside_file = True
+
+			def end_element_handler( self , name ):
+				if name == "file": self.inside_file = False
+
+			def character_data_handler( self , data ):
+				if self.inside_file: self.store.add_file( os.path.join( os.path.basename( self.store.file ) , data.strip() ) )
+
+		parsercb = ParserCB()
+		parsercb.store = self
+
+		x.StartElementHandler = parsercb.start_element_handler
+		x.EndElementHandler = parsercb.end_element_handler
+		x.CharacterDataHandler = parsercb.character_data_handler
+
+		# Parse file
+		if not os.access( self.file , os.R_OK ): return
+		x.ParseFile( file( self.file ) )
+
+
+	
 
 	def add_file( self , fn ):
 		self.project_files.append( fn )
@@ -141,20 +169,32 @@ class Menu( gtk.MenuItem ):
 		menu.append( item )
 		# Open
 		item = gtk.ImageMenuItem( gtk.STOCK_OPEN )
+		item.connect( "activate" , self.on_open_activated )
 		menu.append( item )
 		# Save
-		save = self.save = gtk.ImageMenuItem( gtk.STOCK_SAVE )
-		save.connect( "activate" , self.on_save_activated )
-		#save.set_sensitive( False )
-		menu.append( save )
+		item = gtk.ImageMenuItem( gtk.STOCK_SAVE )
+		item.connect( "activate" , self.on_save_activated )
+		menu.append( item )
 		# Save As
-		saveas = self.saveas = gtk.ImageMenuItem( gtk.STOCK_SAVE_AS )
-		saveas.connect( "activate" , self.on_save_as_activated )
-		#saveas.set_sensitive( False )
-		menu.append( saveas )
+		item = gtk.ImageMenuItem( gtk.STOCK_SAVE_AS )
+		item.connect( "activate" , self.on_save_as_activated )
+		menu.append( item )
 
 	def on_new_activated( self , widget , **data ):
 		self.store.clear()
+	
+	def on_open_activated( self , widget , **data ):
+		ofc = gtk.FileChooserDialog( "Open Project" , None , gtk.FILE_CHOOSER_ACTION_OPEN , ( gtk.STOCK_CANCEL , gtk.RESPONSE_CANCEL , gtk.STOCK_OK , gtk.RESPONSE_OK ) )
+		ofc.connect( "response" , self.on_ofc_response )
+		ofc.show()
+
+	def on_ofc_response( self , widget , response ):
+		fn = widget.get_filename()
+		widget.hide()
+		if response == gtk.RESPONSE_OK:
+			self.store.file = fn
+			self.store.open()
+
 
 	def on_save_activated( self , widget , **data ):
 		if self.store.file: self.store.save()
