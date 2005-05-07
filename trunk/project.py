@@ -1,39 +1,38 @@
 import gtk
 import os
 
+import utils
+
 class Store:
 	def __init__( self ):
 		self.view = None
 		self.menu = None
 		self.file = None
-		self.project_files = set()
+		self.project_files = []
 
 	def clear( self ):
-		pass
+		self.project_files = []
+		self.file = None
 
 	def save( self ):
 		if not self.file: return
 
-		files = self.project_files.copy()
-		files.add( self.file )
+		files = self.project_files[:]
+		files.append( self.file )
 
-		nf = []
-		cp = os.path.commonprefix( files )
-		for f in self.project_files:
-			nf.append( f[len(cp) : ] )
+		cp = utils.commonpath( files )
+
+		files = self.project_files[:]
 
 		fp = open( self.file , "w" )
 		fp.write( "<mide version=\"1.0\">\n" )
-		for file in nf:
-			fp.write( "<file>" + file + "</file>\n" )
-		fp.write( "</mide>" )
+		for file in files:
+			fp.write( "<file>" + file[len(cp):] + "</file>\n" )
+		fp.write( "</mide>\n" )
 		fp.close()
 
-
-
-
 	def add_file( self , fn ):
-		self.project_files.add( fn )
+		self.project_files.append( fn )
 		if self.view: self.view.file_added( fn )
 
 
