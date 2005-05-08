@@ -34,7 +34,11 @@ img {
 
 div.section {
 	width:600px;
-	border: solid 1px  #808080;
+	border: solid  1px  #808080 ;
+	border-top: solid 1px  #808080;
+	border-left: solid 1px  #808080;
+	border-bottom: solid 1px  #303030;
+	border-right: solid 1px  #303030;
 	background: #505050;
 	margin: 0px;
 	margin-bottom: 10px ;
@@ -44,6 +48,10 @@ div.section {
 
 div.subsection {
 	border: solid  1px  #808080 ;
+	border-bottom: solid 1px  #808080;
+	border-right: solid 1px  #808080;
+	border-left: solid 1px  #303030;
+	border-top: solid 1px  #303030;
 	background: #000000 ;
 	margin-top: 5px ;
 	overflow: auto;
