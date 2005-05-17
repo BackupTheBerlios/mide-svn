@@ -1,6 +1,9 @@
 import os
 
 def commonpath( list ):
+	if len(list) < 2:
+		return os.path.split( list[0] )[0] + "/"
+		
 	files = []
 	for f in list:
 		tmp = []

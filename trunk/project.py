@@ -31,6 +31,7 @@ class Store:
 			fp.write( "<file>" + file[len(cp):] + "</file>\n" )
 		fp.write( "</mide>\n" )
 		fp.close()
+
 	def open( self ):
 		x = xml.parsers.expat.ParserCreate()
 		class ParserCB:
@@ -94,6 +95,8 @@ class View( gtk.ScrolledWindow ):
 		col.pack_start( rend , True )
 		col.set_attributes( rend , text=1 )
 		tv.append_column( col )
+		tv.set_search_column( 1 )
+		tv.set_enable_search( True )
 
 		# Right-click menu
 		popup = self.popup = gtk.Menu()
@@ -145,10 +148,36 @@ class View( gtk.ScrolledWindow ):
 		del self.fc
 
 	def file_added( self , fn ):
-		#print "File Added " + os.path.basename( fn )
+		def add_dir( model , iter , name ):
+			i = model.iter_children( iter )
+			while i:
+				if model.get( i , 1 )[0] == name: return i
+				i = model.iter_children( i )
+
+			i = model.append( iter )
+			model.set( i , 0 , self.tv.render_icon( gtk.STOCK_DIRECTORY , gtk.ICON_SIZE_MENU ) , 1 , name )
+			return i
+
+		def add_file( model , iter , name ):
+			i = model.append( iter )
+			model.set( i , 0 , self.tv.render_icon( gtk.STOCK_FILE , gtk.ICON_SIZE_MENU ) , 1 , name )
+			return i
+
 		m = self.model
-		i = m.append( None )
-		m.set( i , 0 , self.tv.render_icon( gtk.STOCK_FILE , gtk.ICON_SIZE_MENU ) , 1 , os.path.basename( fn ) )
+		m.clear()
+		files = self.store.project_files[:]
+		cp = utils.commonpath( files )
+		for file in files:
+			dirs , fn = os.path.split( file[len(cp):] )
+			iter = None
+			if len(dirs ):
+				for dir in dirs.split( os.sep ):
+					iter = add_dir( m , iter , dir )
+
+			add_file( m , iter , fn )
+
+		#i = m.append( None )
+		#m.set( i , 0 , self.tv.render_icon( gtk.STOCK_FILE , gtk.ICON_SIZE_MENU ) , 1 , os.path.basename( fn ) )
 		
 
 class Menu( gtk.MenuItem ):
